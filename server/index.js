@@ -9,7 +9,7 @@ const Schema = buildSchema(`
  },
 
  type Mutation {
-     
+
  }
  type User {
      id: Int
@@ -29,7 +29,6 @@ const Schema = buildSchema(`
  }
  
  
-
 `)
 
 const root = {

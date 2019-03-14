@@ -1,11 +1,17 @@
-const Sequelize = require('sequelize')
 
-const Todo = Sequelize.define('todo',{
-    id: {
-        type:Sequelize.UUID
-    },
-    text: {
-        type:Sequelize.STRING
-    },
-    
-})
+
+module.exports = (sequelize,type) => {
+    return sequelize.define('todo', {
+        id: {
+            type: type.UUID,
+            primaryKey:true,
+        },
+        title: {
+            type:type.String
+        },
+        text: {
+            type:type.String
+        }
+    })
+}
+
