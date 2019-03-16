@@ -1,5 +1,4 @@
 
-
 module.exports = (sequelize,type) => {
     return sequelize.define('todo', {
         id: {
@@ -7,10 +6,10 @@ module.exports = (sequelize,type) => {
             primaryKey:true,
         },
         title: {
-            type:type.String
+            type:type.STRING
         },
         text: {
-            type:type.String
+            type:type.STRING
         }
     })
 }

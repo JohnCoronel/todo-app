@@ -1,19 +1,29 @@
-require('dotenv').load()
-const Sequelize = requre('sequelize')
-
+require('dotenv').config()
+const Sequelize = require('sequelize')
+const UUID = require('uuid/v4')
 const UserModel = require('./User')
 const TodoListModel = require('./TodoList')
 const TodoModel = require('./Todo')
 
 
-const sequelize = new Sequelize(`${process.env.DB}`,`${process.env.USER}`,`${process.env.PASSWORD}`,{
-    host:`${process.env.DB_HOST}`,
+const sequelize = new Sequelize({
+    database: `${process.env.DATABASE}`,
+    username: `${process.env.USERNAME}`,
+    password:null,
     dialect:'postgres',
     pool : {
         max:10,
         min:0,
         acquire:30000,
         idle:10000
+    },
+    define: {
+        hooks:{
+            beforeCreate: (model) => {
+                const uuid = UUID();
+                model.id = uuid;
+            }
+        }
     }
 })
 
@@ -23,6 +33,9 @@ const Todo = TodoModel(sequelize,Sequelize)
 
 User.hasMany(TodoList)
 TodoList.hasMany(Todo)
+
+
+sequelize.sync()
 
 module.exports = {
     User,
