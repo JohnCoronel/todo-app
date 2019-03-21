@@ -1,58 +1,155 @@
-const {buildSchema} = require('graphql')
+const {
+    GraphQLSchema,
+    GraphQLObjectType,
+    GraphQLString,
+    GraphQLID,
+    GraphQLList,
+} = require('graphql')
+
+const Bcrypt = require('bcrypt')
+const jsonwebtoken = require('jsonwebtoken')
 const {User,TodoList,Todo} =  require('../models/sequelize');
 
 
-const Schema = buildSchema(`
-    type User {
-        id: ID,
-        username:String,
-        email:String,
-        lists:[List]
-    },
-
-    type List {
-        id:ID,
-        title:String,
-        todos:[Todo]
-    },
-
-    type Todo {
-        id:ID,
-        title:String,
-        text:String
+const todo = new GraphQLObjectType({
+    name:'todo',
+    fields:{
+        id:{type:GraphQLID},
+        title:{type:GraphQLString},
+        text:{type:GraphQLString}
     }
+})
 
-    type Query {
-        user(id:ID):User
+const todoList = new GraphQLObjectType({
+    name:'todoList',
+    fields:{
+        id: { type:GraphQLID },
+        title: { type:GraphQLString },
+        todos: {
+            type: GraphQLList(todo),
+            async resolve(obj){
+                return Todo.findAll({where:{todolistsId:obj.id}})
+            }
+        }
     }
+})
 
-    type Mutation {
-        user(username:String!,email:String!,password:String!):User!
+const user = new GraphQLObjectType({
+    name:'user',
+    fields:{
+        id: {type:GraphQLID},
+        username:{type:GraphQLString},
+        email:{type:GraphQLString},
+        lists:{type:GraphQLList(todoList)}
+    } 
+})
+
+
+const queryType = new GraphQLObjectType({
+    name:'Query',
+        fields: {
+            user: {
+                type: user,
+            args:{
+                id: {type: GraphQLID}
+            },
+            async resolve(parentValue,args,ctx) {
+                
+                const user = await User.findByPk(args.id)
+                // const lists = await TodoList.findAll({where:{UserId:user.id}})
+                console.log('user is ',user)
+                return {
+                    id:user.id,
+                    email:user.email,
+                    username:user.username
+                    // lists
+                }
+            }
+        }
     }
+})
 
-`)
 
-const root = {
-    Query: {
-    user: (_,{id}) => User.findByPk(id),
-    lists:(obj) => TodoList.findAll({where:{userId:obj.id}}),
-    todos:(obj) => Todo.findAll({where:{listId:obj.id}}),
-    list: {
-        title: (parent) => parent.title,
-        id: (parent) => parent.id,
-    },
-    todo: {
-        title: (obj) => obj.title,
-        text: (obj) => obj.text,
-        id: (obj) => obj.id
+const mutationType = new GraphQLObjectType({
+    name:'Mutation',
+    fields:{
+        newUser:{
+            type:GraphQLString,
+            args:{
+                username:{type:GraphQLString},
+                password:{type:GraphQLString},
+                email:{type:GraphQLString}
+            },
+            async resolve (_,{username,email,password}) {
+                const user = await User.create({username,email,password})
+                return jsonwebtoken.sign(
+                {id:user.id,email:user.email},
+                process.env.JWT_SECRET,{expiresIn:'1y'}
+                )}
+        },
+        newList:{
+            type:todoList,
+            args: {
+                title: {
+                    type:GraphQLString
+                }
+            },
+            async resolve (obj,args,ctx) {
+                const tl = await TodoList.create({title:args.title,UserId:ctx.user.id})
+                return tl
+             }
+        },
+        newTodo:{
+            type: todo,
+            args:{
+                title:{
+                    type:GraphQLString
+                },
+                text:{
+                    type:GraphQLString
+                }
+            },
+            async resolve (obj,args,ctx) {
+                return Todo.create({title:args.title,text:args.text,todoListsId:ctx.todolistsId})
+            }
+        },
+        login: {
+            type:GraphQLString,
+            args:{
+                email:{
+                    type:GraphQLString,
+                },
+                password:{
+                    type:GraphQLString,
+                }
+            },
+            async resolve (obj,args,ctx) {
+               const user = User.findOne({where:{email:args.email}})
+                if (!user) {
+                    throw new Error('No user found with that email')
+                }
+                const valid = await Bcrypt.compare(args.password, user.password)
+
+                if (!valid) {
+                    throw new Error('Incorrect password')
+                }
+
+                const jwt = jsonwebtoken.sign({
+                    id:user.id,
+                    email:user.email
+                },process.env.JWT_SECRET,{expiresIn:'1y'})
+               return jwt
+            }
+        }
     }
-    },
-    Mutation: {
-        user:(_,args) => User.create({username:args.username,email:args.email,password:args.password})
-    }
+})
 
-}
 
-module.exports = {Schema,root}
+const Schema = new GraphQLSchema({
+    query:queryType,
+    mutation: mutationType
+})
+
+module.exports = {Schema}
 
 

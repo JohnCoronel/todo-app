@@ -9,6 +9,7 @@ const TodoModel = require('./Todo')
 const sequelize = new Sequelize({
     database: `${process.env.DATABASE}`,
     username: `${process.env.USERNAME}`,
+    logging:false,
     password:null,
     dialect:'postgres',
     pool : {
@@ -16,16 +17,10 @@ const sequelize = new Sequelize({
         min:0,
         acquire:30000,
         idle:10000
-    },
-    define: {
-        hooks:{
-            beforeCreate: (model) => {
-                const uuid = UUID();
-                model.id = uuid;
-            }
-        }
     }
 })
+
+
 
 const User = UserModel(sequelize,Sequelize)
 const TodoList = TodoListModel(sequelize,Sequelize)
