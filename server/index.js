@@ -17,10 +17,13 @@ const auth = jwt({secret:process.env.JWT_SECRET,
 
 
 
-app.use('/graphql',bodyParser.json(),auth, express_graphql({
+app.use('/graphql',bodyParser.json(),auth, express_graphql(req => ({
     schema:Schema,
+    context:{
+        user:req.user
+    },
     graphiql:true
-})
+}))
 )
 
 app.listen(9000)

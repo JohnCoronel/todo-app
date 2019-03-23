@@ -1,12 +1,11 @@
 const Bcrypt = require('bcrypt')
-const UUID = require('uuid/v4')
 
 module.exports = (sequelize,type) => {
     return sequelize.define('user',{
         id: {
             type:type.UUID,
             primaryKey:true,
-            defaultValue: UUID()
+            defaultValue: type.UUIDV1
         },
         username: {
             type:type.STRING,
